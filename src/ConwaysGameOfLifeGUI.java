@@ -1,6 +1,5 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.Point;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -14,11 +13,13 @@ public class ConwaysGameOfLifeGUI extends JPanel {
     private final Color transLightPink = new Color(247, 168, 184);
     private final Color transWhite = Color.WHITE;
     private final int transitionStartDelay = 10000; // 10 seconds before starting the transition
+    private double time = 0; // Time variable to animate the wave
 
     public ConwaysGameOfLifeGUI() {
         gameOfLife = new ConwaysByAttea(30, 60);
         startConwaysGameOfLife();
         startTransitionToFlag();
+        startWavingEffect();
     }
 
     // Start Conway's Game of Life rules
@@ -63,6 +64,17 @@ public class ConwaysGameOfLifeGUI extends JPanel {
         }, 0, transitionDelay); // Trigger each diagonal step with a delay
     }
 
+    private void startWavingEffect() {
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                time += 0.1;  // Adjust the speed of the wave
+                repaint();
+            }
+        }, 0, 50); // Repaint every 50 milliseconds
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -71,6 +83,7 @@ public class ConwaysGameOfLifeGUI extends JPanel {
         for (int row = 0; row < gameOfLife.getRows(); row++) {
             for (int col = 0; col < gameOfLife.getCols(); col++) {
                 Point cell = new Point(row, col);
+                int waveOffset = (int) (10 * Math.sin((col + time) / 2)); // Adjust wave parameters
                 if (isTransitioningToFlag && row + col < currentDiagonalStep) {
                     // Paint trans flag colors based on the current row
                     setFlagColor(g, row);
@@ -78,7 +91,7 @@ public class ConwaysGameOfLifeGUI extends JPanel {
                     // Paint Game of Life cells
                     g.setColor(gameOfLife.getGrid().get(cell) ? Color.BLACK : Color.GRAY);
                 }
-                g.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                g.fillRect(col * cellSize, (row * cellSize) + waveOffset, cellSize, cellSize);
             }
         }
     }
