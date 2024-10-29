@@ -18,11 +18,10 @@ public class ConwaysGameOfLifeGUI extends JPanel {
     public ConwaysGameOfLifeGUI() {
         gameOfLife = new ConwaysByAttea(30, 60);
         startConwaysGameOfLife();
-        startTransitionToFlag();
-        startWavingEffect();
+        initiateTransitions();
     }
 
-    // Start Conway's Game of Life rules
+    // Start Conway's Game of Life
     private void startConwaysGameOfLife() {
         Timer gameTimer = new Timer();
         gameTimer.schedule(new TimerTask() {
@@ -30,14 +29,19 @@ public class ConwaysGameOfLifeGUI extends JPanel {
             public void run() {
                 if (!isTransitioningToFlag) {
                     gameOfLife.updateGrid();
-                    repaint();
                 }
+                repaint();
             }
-        }, 0, 100); // Update every 100 milliseconds
+        }, 0, 100);
     }
 
-    // Start transition to trans flag after 10 seconds
-    private void startTransitionToFlag() {
+    // Initialize both the flag transition and waving effect
+    private void initiateTransitions() {
+        startFlagTransition();
+        startWavingEffect();
+    }
+
+    private void startFlagTransition() {
         new Timer().schedule(new TimerTask() {
             @Override
             public void run() {
@@ -47,21 +51,31 @@ public class ConwaysGameOfLifeGUI extends JPanel {
         }, transitionStartDelay);
     }
 
-    // Transition the game to the trans flag diagonally
     private void startDiagonalFlagTransition() {
         Timer transitionTimer = new Timer();
         transitionTimer.schedule(new TimerTask() {
             @Override
             public void run() {
                 currentDiagonalStep++;
+                markFlagCells(); // Mark cells for the trans flag transition
                 repaint();
 
-                // Stop when the diagonal has reached the entire grid
                 if (currentDiagonalStep > gameOfLife.getRows() + gameOfLife.getCols()) {
                     transitionTimer.cancel();
                 }
             }
-        }, 0, transitionDelay); // Trigger each diagonal step with a delay
+        }, 0, transitionDelay);
+    }
+
+    // Mark cells with FLAG_COLOR as part of the transition
+    private void markFlagCells() {
+        for (int row = 0; row < gameOfLife.getRows(); row++) {
+            for (int col = 0; col < gameOfLife.getCols(); col++) {
+                if (row + col < currentDiagonalStep) {
+                    gameOfLife.setFlagColor(new Point(row, col));
+                }
+            }
+        }
     }
 
     private void startWavingEffect() {
@@ -83,14 +97,16 @@ public class ConwaysGameOfLifeGUI extends JPanel {
         for (int row = 0; row < gameOfLife.getRows(); row++) {
             for (int col = 0; col < gameOfLife.getCols(); col++) {
                 Point cell = new Point(row, col);
-                int waveOffset = (int) (10 * Math.sin((col + time) / 2)); // Adjust wave parameters
-                if (isTransitioningToFlag && row + col < currentDiagonalStep) {
-                    // Paint trans flag colors based on the current row
+                int waveOffset = (int) (10 * Math.sin((col + time) / 2));
+
+                ConwaysByAttea.CellState cellState = gameOfLife.getGrid().getOrDefault(cell, ConwaysByAttea.CellState.DEAD);
+                
+                if (cellState == ConwaysByAttea.CellState.FLAG_COLOR) {
                     setFlagColor(g, row);
                 } else {
-                    // Paint Game of Life cells
-                    g.setColor(gameOfLife.getGrid().get(cell) ? Color.BLACK : Color.GRAY);
+                    g.setColor(cellState == ConwaysByAttea.CellState.ALIVE ? Color.BLACK : Color.GRAY);
                 }
+                
                 g.fillRect(col * cellSize, (row * cellSize) + waveOffset, cellSize, cellSize);
             }
         }
