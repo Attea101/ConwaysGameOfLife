@@ -1,52 +1,66 @@
-import javax.swing.*;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Point;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+
 import java.util.Timer;
 import java.util.TimerTask;
 
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+
 public class ConwaysGameOfLifeGUI extends JPanel {
-    private final ConwaysByAttea gameOfLife;
-    private final int cellSize = 20;
-    private final int transitionDelay = 100; // Delay between each diagonal step
-    private int currentDiagonalStep = 0; // Tracks the diagonal transition progress
-    private boolean isTransitioningToFlag = false; // Flag to indicate when the transition starts
-    private final Color transLightBlue = new Color(85, 205, 252);
-    private final Color transLightPink = new Color(247, 168, 184);
-    private final Color transWhite = Color.WHITE;
-    private final int transitionStartDelay = 10000; // 10 seconds before starting the transition
-    private double time = 0; // Time variable to animate the wave
+    private ConwaysByAttea gameOfLife; // Instance of the Game of Life
+    private final int cellSize = 20; // Size of each cell in the grid
+    private final int transitionDelay = 100; // Delay for flag transition animation
+    private final int transitionStartDelay = 500; // Delay before starting the flag transition
+    private final int waveAmplitude = 10; // Amplitude for the waving effect
+    private final int wavePeriod = 2; // Period for the waving effect
+    private int currentDiagonalStep = 0; // Tracks the current diagonal step in flag transition
+    private boolean isTransitioningToFlag = false; // Indicates if the transition to the flag is active
+    private boolean isGameOfLifeMode = true; // Indicates if the Game of Life mode is active
+    private final Color transLightBlue = new Color(85, 205, 252); // Light blue color for the trans flag
+    private final Color transLightPink = new Color(247, 168, 184); // Light pink color for the trans flag
+    private final Color transWhite = Color.WHITE; // White color for the trans flag
+    private double time = 0; // Tracks time for the waving effect
 
     public ConwaysGameOfLifeGUI() {
+        // Initialize the game with a grid of 30 rows and 60 columns
         gameOfLife = new ConwaysByAttea(30, 60);
-        startConwaysGameOfLife();
-        initiateTransitions();
+        startConwaysGameOfLife(); // Start the Game of Life loop
+        addKeyListener(new ToggleListener()); // Add key listener for toggling modes
+        setFocusable(true); // Make the panel focusable for key events
     }
 
-    // Start Conway's Game of Life
     private void startConwaysGameOfLife() {
+        // Timer to update the Game of Life at regular intervals
         Timer gameTimer = new Timer();
         gameTimer.schedule(new TimerTask() {
             @Override
             public void run() {
-                if (!isTransitioningToFlag) {
-                    gameOfLife.updateGrid();
+                if (isGameOfLifeMode && !isTransitioningToFlag) {
+                    gameOfLife.updateGrid(); // Update the grid if in Game of Life mode
                 }
-                repaint();
+                repaint(); // Repaint the panel to reflect updates
             }
-        }, 0, 100);
+        }, 0, 100); // Run every 100 milliseconds
     }
 
-    // Initialize both the flag transition and waving effect
     private void initiateTransitions() {
-        startFlagTransition();
-        startWavingEffect();
+        startFlagTransition(); // Start the flag transition
+        startWavingEffect(); // Start the waving effect
     }
 
     private void startFlagTransition() {
+        // Delay the start of the flag transition
         new Timer().schedule(new TimerTask() {
             @Override
             public void run() {
-                isTransitioningToFlag = true;
-                startDiagonalFlagTransition();
+                if (!isGameOfLifeMode) {
+                    isTransitioningToFlag = true; // Set transitioning flag
+                    startDiagonalFlagTransition(); // Start diagonal transition for flag
+                }
             }
         }, transitionStartDelay);
     }
@@ -56,81 +70,110 @@ public class ConwaysGameOfLifeGUI extends JPanel {
         transitionTimer.schedule(new TimerTask() {
             @Override
             public void run() {
-                currentDiagonalStep++;
-                markFlagCells(); // Mark cells for the trans flag transition
-                repaint();
-
+                if (isTransitioningToFlag) {
+                    currentDiagonalStep++; // Increment diagonal step
+                    markFlagCells(); // Mark cells for the flag
+                    repaint(); // Repaint the panel
+                }
+                // Stop the transition once all cells are marked
                 if (currentDiagonalStep > gameOfLife.getRows() + gameOfLife.getCols()) {
                     transitionTimer.cancel();
                 }
             }
-        }, 0, transitionDelay);
+        }, 0, transitionDelay); // Run at defined transition delay
     }
 
-    // Mark cells with FLAG_COLOR as part of the transition
     private void markFlagCells() {
+        // Only mark cells in the diagonal range based on the current diagonal step
         for (int row = 0; row < gameOfLife.getRows(); row++) {
             for (int col = 0; col < gameOfLife.getCols(); col++) {
+                // Check if the cell is within the diagonal range
                 if (row + col < currentDiagonalStep) {
-                    gameOfLife.setFlagColor(new Point(row, col));
+                    gameOfLife.setFlagColor(new Point(row, col)); // Set cell color to flag color
                 }
             }
         }
     }
 
     private void startWavingEffect() {
+        // Timer for the waving effect
         Timer timer = new Timer();
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
-                time += 0.1;  // Adjust the speed of the wave
-                repaint();
+                time += 0.1; // Increment time for wave calculation
+                repaint(); // Repaint the panel
             }
-        }, 0, 50); // Repaint every 50 milliseconds
+        }, 0, 50); // Run every 50 milliseconds
+    }
+
+    private class ToggleListener extends KeyAdapter {
+        @Override
+        public void keyPressed(KeyEvent e) {
+            // Toggle modes when 'T' or 't' is pressed
+            if (e.getKeyChar() == 't' || e.getKeyChar() == 'T') {
+                isGameOfLifeMode = !isGameOfLifeMode; // Switch between modes
+                isTransitioningToFlag = !isGameOfLifeMode; // Set transition flag based on mode
+                currentDiagonalStep = 0; // Reset diagonal step
+
+                if (!isGameOfLifeMode) {
+                    // Immediately start transitions if switching to flag mode
+                    initiateTransitions();
+                } else {
+                    // Reset the Game of Life when switching back
+                    gameOfLife = new ConwaysByAttea(30, 60);
+                    startConwaysGameOfLife(); // Restart the Game of Life loop
+                }
+            }
+        }
     }
 
     @Override
     protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
+        super.paintComponent(g); // Call superclass paint method
 
-        // Loop through the grid and paint cells based on either game state or flag transition
         for (int row = 0; row < gameOfLife.getRows(); row++) {
             for (int col = 0; col < gameOfLife.getCols(); col++) {
                 Point cell = new Point(row, col);
-                int waveOffset = (int) (10 * Math.sin((col + time) / 2));
+                // Calculate wave offset for waving effect
+                int waveOffset = (int) (waveAmplitude * Math.sin((col + time) / wavePeriod));
 
+                // Get the cell state from the grid
                 ConwaysByAttea.CellState cellState = gameOfLife.getGrid().getOrDefault(cell, ConwaysByAttea.CellState.DEAD);
                 
                 if (cellState == ConwaysByAttea.CellState.FLAG_COLOR) {
-                    setFlagColor(g, row);
+                    setFlagColor(g, row); // Set color for flag cells
                 } else {
+                    // Set color based on alive or dead state
                     g.setColor(cellState == ConwaysByAttea.CellState.ALIVE ? Color.BLACK : Color.GRAY);
                 }
                 
-                g.fillRect(col * cellSize, (row * cellSize) + waveOffset, cellSize, cellSize);
+                // Draw the cell with the calculated wave offset
+                g.fillRect(col * cellSize, (row * cellSize) + (isGameOfLifeMode ? 0 : waveOffset), cellSize, cellSize);
             }
         }
     }
 
-    // Set color based on row to maintain the trans flag pattern
     private void setFlagColor(Graphics g, int row) {
-        int flagSectionHeight = gameOfLife.getRows() / 5;
+        // Determine color based on the row for the trans flag
+        int flagSectionHeight = gameOfLife.getRows() / 5; // Height of each flag section
         if (row < flagSectionHeight || row >= 4 * flagSectionHeight) {
-            g.setColor(transLightBlue);
+            g.setColor(transLightBlue); // Top and bottom sections
         } else if ((row >= flagSectionHeight && row < 2 * flagSectionHeight) ||
                    (row >= 3 * flagSectionHeight && row < 4 * flagSectionHeight)) {
-            g.setColor(transLightPink);
+            g.setColor(transLightPink); // Middle sections
         } else {
-            g.setColor(transWhite);
+            g.setColor(transWhite); // White section
         }
     }
 
     public static void main(String[] args) {
-        JFrame frame = new JFrame("Conway's Game of Life - Diagonal Trans Flag Transition");
+        // Setup the main frame for the game
+        JFrame frame = new JFrame("Conway's Game of Life - Press T to Toggle");
         ConwaysGameOfLifeGUI gameOfLifePanel = new ConwaysGameOfLifeGUI();
-        frame.add(gameOfLifePanel);
-        frame.setSize(1200, 600);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
+        frame.add(gameOfLifePanel); // Add the game panel to the frame
+        frame.setSize(1200, 600); // Set the frame size
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // Exit on close
+        frame.setVisible(true); // Make the frame visible
     }
 }

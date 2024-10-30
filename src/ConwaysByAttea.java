@@ -4,21 +4,21 @@ import java.util.Map;
 
 public class ConwaysByAttea implements ConwaysGameOfLife {
 
-    public enum CellState { ALIVE, DEAD, FLAG_COLOR }
+    public enum CellState { ALIVE, DEAD, FLAG_COLOR } // Define cell states
     
-    private final int rows;
-    private final int cols;
-    private Map<Point, CellState> grid;
+    private final int rows; // Number of rows in the grid
+    private final int cols; // Number of columns in the grid
+    private Map<Point, CellState> grid; // Map to hold the grid cells
 
     public ConwaysByAttea(int rows, int cols) {
         this.rows = rows;
         this.cols = cols;
-        this.grid = new HashMap<>();
-        initializeGrid();
+        this.grid = new HashMap<>(); // Initialize the grid
+        initializeGrid(); // Populate the grid with random states
     }
 
-    // Initializes the grid with random live and dead cells
     private void initializeGrid() {
+        // Randomly set cells to alive or dead
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < cols; col++) {
                 grid.put(new Point(row, col), Math.random() < 0.5 ? CellState.ALIVE : CellState.DEAD);
@@ -26,21 +26,59 @@ public class ConwaysByAttea implements ConwaysGameOfLife {
         }
     }
     
-    // Counts the live neighbors around a cell
     private int countLiveNeighbours(Point point) {
+        // Count the number of live neighbors for a given cell
         int liveNeighbours = 0;
-        int[] directions = {-1, 0, 1};
-
-        for (int i : directions) {
-            for (int j : directions) {
-                if (i == 0 && j == 0) continue;
-                Point neighbour = new Point(point.x + i, point.y + j);
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                if (dx == 0 && dy == 0) continue; // Skip the cell itself
+                Point neighbour = new Point(point.x + dx, point.y + dy);
                 if (grid.getOrDefault(neighbour, CellState.DEAD) == CellState.ALIVE) {
                     liveNeighbours++;
                 }
             }
         }
-        return liveNeighbours;
+        return liveNeighbours; // Return the count of live neighbors
+    }
+
+    public void updateGrid() {
+        // Create a copy of the current grid to apply updates
+        Map<Point, CellState> newGrid = new HashMap<>(grid);
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                Point cell = new Point(row, col);
+                int liveNeighbours = countLiveNeighbours(cell); // Count live neighbors
+                
+                // Apply the rules of the Game of Life
+                if (grid.get(cell) == CellState.ALIVE) {
+                    if (liveNeighbours < 2 || liveNeighbours > 3) {
+                        newGrid.put(cell, CellState.DEAD); // Cell dies
+                    }
+                } else {
+                    if (liveNeighbours == 3) {
+                        newGrid.put(cell, CellState.ALIVE); // Cell becomes alive
+                    }
+                }
+            }
+        }
+        grid = newGrid; // Update the grid with the new states
+    }
+
+    public void setFlagColor(Point cell) {
+        // Set a cell's state to FLAG_COLOR for the trans flag transition
+        grid.put(cell, CellState.FLAG_COLOR);
+    }
+
+    public int getRows() {
+        return rows; // Return number of rows
+    }
+
+    public int getCols() {
+        return cols; // Return number of columns
+    }
+
+    public Map<Point, CellState> getGrid() {
+        return grid; // Return the grid map
     }
 
     @Override
@@ -62,43 +100,5 @@ public class ConwaysByAttea implements ConwaysGameOfLife {
     @Override
     public boolean deadCellWithExactlyThreeLiveNeighboursBecomesAlive(Point point) {
         return countLiveNeighbours(point) == 3;
-    }
-
-    // Updates the grid for the next generation
-    public void updateGrid() {
-        Map<Point, CellState> newGrid = new HashMap<>(grid.size());
-
-        for (Map.Entry<Point, CellState> entry : grid.entrySet()) {
-            Point point = entry.getKey();
-            CellState currentState = entry.getValue();
-            CellState nextState;
-
-            if (currentState == CellState.ALIVE) {
-                nextState = liveCellWithTwoOrThreeLiveNeighboursLives(point) ? CellState.ALIVE : CellState.DEAD;
-            } else {
-                nextState = deadCellWithExactlyThreeLiveNeighboursBecomesAlive(point) ? CellState.ALIVE : CellState.DEAD;
-            }
-
-            newGrid.put(point, nextState);
-        }
-
-        grid = newGrid;
-    }
-
-    public int getRows() {
-        return rows;
-    }
-
-    public int getCols() {
-        return cols;
-    }
-
-    public Map<Point, CellState> getGrid() {
-        return grid;
-    }
-
-    // Method to set a cell as part of the flag color
-    public void setFlagColor(Point point) {
-        grid.put(point, CellState.FLAG_COLOR);
     }
 }
